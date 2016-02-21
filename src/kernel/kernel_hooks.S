@@ -24,7 +24,7 @@ SaveAndResetDataBATs_And_SRs_hook:
 
     # call back the position in kernel after our patch
     lis r7, 0xFFF1
-    ori r7, r7, 0xD78C
+    ori r7, r7, 0xD66C # 0xD78C for 5.3.2
     mtctr r7
     bctr
 
@@ -70,7 +70,7 @@ my_PrepareTitle_hook:
 
     # setup CTR to jump back to kernel code
     lis r31, 0xFFF1
-    ori r31, r31, 0x855C
+    ori r31, r31, 0x8538 # 0x855C for 5.3.2
     mtspr CTR, r31
 
     # restore all original values of registers from stack

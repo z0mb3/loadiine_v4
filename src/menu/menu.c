@@ -28,7 +28,6 @@ int Menu_Main(int argc, char *argv[]) {
     /* ****************************************************************** */
     /*                              MENU CHECK                            */
     /* ****************************************************************** */
-
     // mii maker is our menu :), if it's another app, continue coreinit process
     if (title_id != 0x000500101004A200 && // mii maker eur
         title_id != 0x000500101004A100 && // mii maker usa
@@ -392,12 +391,14 @@ int Menu_Main(int argc, char *argv[]) {
                         char buf_vol_odd[20] = "/vol/storage_odd03";
                         _SYSLaunchTitleByPathFromLauncher(buf_vol_odd, 18, 0);
                     } else {
+                        log_string(bss.global_sock, "Going to home menu", BYTE_LOG_STR);
                         // Go to home menu
                         SYSLaunchMenu();
                     }
                 }
                 else {
                     // Restart mii maker
+                    log_string(bss.global_sock, "Restarting Mii Maker", BYTE_LOG_STR);
                     SYSRelaunchTitle(0, NULL);
                 }
                 break;
@@ -834,6 +835,13 @@ const struct magic_t {
     const unsigned int repl_addr;     // address where to place the jump to the our function
     const unsigned int call_type;     // call type, e.g. 0x48000000 for branch and 0x48000001 for branch link
 } menu_methods[] __attribute__((section(".menu_magic"))) = {
+#if VER == 500
+    /* Patch coreinit - on 5.1.0 coreinit.rpl starts at 0x101c000 */
+    { Menu_Main, 0x0101c15c, 0x48000003 },           // bla Branch Link Adress
+#elif VER == 531
     /* Patch coreinit - on 5.3.2 coreinit.rpl starts at 0x101c400 */
     { Menu_Main, 0x0101c55c, 0x48000003 },           // bla Branch Link Adress
+#else
+#error "Unsupported Wii U software version"
+#endif
 };

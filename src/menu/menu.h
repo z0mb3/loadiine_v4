@@ -10,8 +10,8 @@
 #define MAX_GAME_ON_PAGE    11
 
 /* Main */
-extern int (* const MiiMaker_main)(int argc, char *argv[]);
-#define main (*MiiMaker_main)
+extern int (* const entry_point)(int argc, char *argv[]);
+#define main (*entry_point)
 
 /* System */
 extern void _Exit (void);

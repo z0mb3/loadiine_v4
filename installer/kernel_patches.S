@@ -38,7 +38,7 @@ KernelPatches:
     # SaveAndResetDataBATs_And_SRs hook setup, but could be any BAT function though
     # just chosen because its simple
     lis r3, 0xFFF1
-    ori r3, r3, 0xD744
+    ori r3, r3, 0xD624 # 0xD744 for 5.3.2
 
     # make the kernel setup our section in IBAT4 and
     # jump to our function to restore the replaced instructions
@@ -72,7 +72,7 @@ KernelPatches:
 
     # flush and invalidate the replaced instructions
     lis r3, 0xFFF1
-    ori r3, r3, 0xD740
+    ori r3, r3, 0xD620 # 0xD740 for 5.3.2
     dcbf 0, r3
     icbi 0, r3
 
@@ -81,33 +81,33 @@ KernelPatches:
 
     # nop on IBATU 4 set/reset
     lis r3, 0xFFF1
-    ori r3, r3, 0xD558
+    ori r3, r3, 0xD438 # 0xD558 for 5.3.2
     stw r4, 0(r3)
     dcbf 0, r3
     icbi 0, r3
 
     lis r3, 0xFFF1
-    ori r3, r3, 0xD73C
+    ori r3, r3, 0xD61C # 0xD73C for 5.3.2
     stw r4, 0(r3)
     dcbf 0, r3
     icbi 0, r3
 
     # nop on IBATL 4 set/reset
     lis r3, 0xFFF1
-    ori r3, r3, 0xD550
+    ori r3, r3, 0xD430 # 0xD550 for 5.3.2
     stw r4, 0(r3)
     dcbf 0, r3
     icbi 0, r3
 
     # nop on remove of supervisor level from IBATU 4
     lis r3, 0xFFF0
-    ori r3, r3, 0x6A14
+    ori r3, r3, 0x697C # 0x6A14 for 5.3.2
     stw r4, 0(r3)
     dcbf 0, r3
     icbi 0, r3
 
     lis r3, 0xFFF0
-    ori r3, r3, 0x6AA0
+    ori r3, r3, 0x6A08 # 0x6AA0 for 5.3.2
     stw r4, 0(r3)
     dcbf 0, r3
     icbi 0, r3
@@ -130,13 +130,13 @@ KernelPatches:
     lis r4, 0x6000
 
     lis r3, 0xFFF1
-    ori r3, r3, 0xD518
+    ori r3, r3, 0xD3F8 # 0xD518 for 5.3.2
     stw r4, 0(r3)
     dcbf 0, r3
     icbi 0, r3
 
     lis r3, 0xFFF1
-    ori r3, r3, 0xD72C
+    ori r3, r3, 0xD60C # 0xD72C for 5.3.2
     stw r4, 0(r3)
     dcbf 0, r3
     icbi 0, r3
@@ -150,7 +150,7 @@ KernelPatches:
     # Now lets hook the kernel function for result printing of PrepareTitle add jump to our function
     # at location 0x00AE1058
     lis r3, 0xFFF1
-    ori r3, r3, 0x8558
+    ori r3, r3, 0x8534 # 0x8558 for 5.3.2. Function is a little different though
     lis r4, 0x48AE
     ori r4, r4, 0x105A
     stw r4, 0(r3)

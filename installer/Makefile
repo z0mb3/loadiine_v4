@@ -11,7 +11,7 @@ build	:=	 $(root)/bin
 www_loadiine :=$(root)/../../www/loadiine
 framework:=$(root)/../../../framework
 
-all: clean setup main main532 print_stats
+all: clean setup main main500 print_stats
 
 setup:
 	mkdir -p $(root)/bin/
@@ -19,6 +19,16 @@ setup:
 main:
 	cd ../ && make clean
 	cd ../ && make
+
+main500:
+	$(CC) $(CFLAGS) -DVER=500 $(project)/launcher.c
+	$(AS) -mregnames -o kernel_patches.o $(project)/kernel_patches.S 
+	#-Wa,-a,-ad
+	cp -r $(root)/*.o $(build)
+	rm $(root)/*.o
+	$(LD) $(LDFLAGS) -s -o $(build)/code500.bin $(build)/launcher.o `find $(build) -name "*.o" ! -name "launcher.o"`
+	#cp -rf ../*.elf $(www_loadiine)
+	#cp -rf ../*.elf ../www/loadiine
 
 main532:
 	$(CC) $(CFLAGS) -DVER=532 $(project)/launcher.c
@@ -28,8 +38,9 @@ main532:
 	rm $(root)/*.o
 	$(LD) $(LDFLAGS) -s -o $(build)/code532.bin $(build)/launcher.o `find $(build) -name "*.o" ! -name "launcher.o"`
 	cp -rf ../*.elf $(www_loadiine)
-	cp -rf ../*.elf ../www/loadiine
+	#cp -rf ../*.elf ../www/loadiine
 
+	
 clean:
 	rm -rf $(build)
 

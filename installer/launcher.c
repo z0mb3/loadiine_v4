@@ -5,17 +5,26 @@
 #include "../../libwiiu/src/vpad.h"
 #include "../../libwiiu/src/socket.h"
 
-#if VER == 532
-    #define CODE_RW_BASE_OFFSET     0xBC000000
-    #define DATA_RW_BASE_OFFSET     0
+#define CODE_RW_BASE_OFFSET     0xBC000000
+#define DATA_RW_BASE_OFFSET     0
 
-    // Function definitions
+// Function definitions
+#if VER == 500
+    #define SYSLaunchMiiStudio ((void (*)(void))0xDEAAE68)
+    #define _Exit ((void (*)(void))0x0101c970)
+    #define OSEffectiveToPhysical ((void* (*)(const void*))0x0101F110)
+    #define memcpy ((void * (*)(void * dest, const void * src, int num))0x1035460)
+    #define DCFlushRange ((void (*)(const void *addr, uint length))0x1023A00)
+    #define ICInvalidateRange ((void (*)(const void *addr, uint length))0x1023B28)
+#elif VER == 531
     #define SYSLaunchMiiStudio ((void (*)(void))0xDEAAEB8)
     #define _Exit ((void (*)(void))0x0101cd70)
     #define OSEffectiveToPhysical ((void* (*)(const void*))0x0101f510)
     #define memcpy ((void * (*)(void * dest, const void * src, int num))0x1035a6c)
     #define DCFlushRange ((void (*)(const void *addr, uint length))0x1023ee8)
     #define ICInvalidateRange ((void (*)(const void *addr, uint length))0x1024010)
+#else
+#error "Unsupported Wii U software version"
 #endif
 
 #define PRINT_TEXT1(x, y, str) { OSScreenPutFontEx(1, x, y, str); }
@@ -140,21 +149,6 @@ void _start()
         OSDynLoad_FindExport(coreinit_handle, 0, "OSAllocFromSystem", &OSAllocFromSystem);
         OSDynLoad_FindExport(coreinit_handle, 0, "OSFreeToSystem", &OSFreeToSystem);
 
-        /* Send restart signal to get rid of uneeded threads */
-        /* Cause the other browser threads to exit */
-        int fd = IM_Open();
-        void *mem = OSAllocFromSystem(0x100, 64);
-        memset(mem, 0, 0x100);
-
-        /* Sets wanted flag */
-        IM_SetDeviceState(fd, mem, 3, 0, 0);
-        IM_Close(fd);
-        OSFreeToSystem(mem);
-
-        /* Waits for thread exits */
-        unsigned int t1 = 0x1FFFFFFF;
-        while(t1--) ;
-
         /* Prepare for thread startups */
         int (*OSCreateThread)(OSThread *thread, void *entry, int argc, void *args, unsigned int stack, unsigned int stack_size, int priority, unsigned short attr);
         int (*OSResumeThread)(OSThread *thread);
@@ -182,10 +176,6 @@ void _start()
         /* Schedule it for execution */
         OSResumeThread(thread);
 
-        /* while we are downloading let the user select his IP stuff */
-        unsigned int ip_address = 0;
-        int result = show_ip_selection_screen(coreinit_handle, &ip_address);
-
         // Keep this main thread around for ELF loading
         // Can not use OSJoinThread, which hangs for some reason, so we use a detached one and wait for it to terminate
         while(OSIsThreadTerminated(thread) == 0)
@@ -205,6 +195,25 @@ void _start()
         /* Free thread memory and stack */
         private_data.MEMFreeToDefaultHeap(thread);
         private_data.MEMFreeToDefaultHeap(stack);
+        
+        /* Send restart signal to get rid of uneeded threads */
+        /* Cause the other browser threads to exit */
+        int fd = IM_Open();
+        void *mem = OSAllocFromSystem(0x100, 64);
+        memset(mem, 0, 0x100);
+
+        /* Sets wanted flag */
+        IM_SetDeviceState(fd, mem, 3, 0, 0);
+        IM_Close(fd);
+        OSFreeToSystem(mem);
+
+        /* Waits for thread exits */
+        unsigned int t1 = 0x1FFFFFFF;
+        while(t1--) ;
+        
+       /* while we are downloading let the user select his IP stuff */
+        unsigned int ip_address = 0;
+        int result = show_ip_selection_screen(coreinit_handle, &ip_address);
 
         /* Install our ELF files */
         if(result){
@@ -264,7 +273,11 @@ static void kern_write(uint32_t addr, uint32_t value)
 		);
 }
 
-#define KERN_SYSCALL_TBL_5          0xFFEAA0E0 // works with browser
+#if VER == 500
+    #define KERN_SYSCALL_TBL_5          0xffea9520 // works with browser
+#elif VER == 531
+    #define KERN_SYSCALL_TBL_5          0xFFEAA0E0 // works with browser
+#endif
 
 static void SetupKernelSyscall(unsigned int address)
 {
@@ -339,6 +352,8 @@ static int show_ip_selection_screen(unsigned int coreinit_handle, unsigned int *
     int noip = 1;
     int result = 0;
     int delay = 0;
+    
+    int bytes_downloaded = 0;
 
     while (1)
     {
@@ -707,12 +722,12 @@ static void InstallLoader(private_data_t *private_data)
     }
 
     /* Patch to bypass SDK version tests */
-    *((volatile uint32_t *)(0xC1000000 + 0x010095b4)) = 0x480000a0; // ble loc_1009654    (0x408100a0) => b loc_1009654      (0x480000a0)
-    *((volatile uint32_t *)(0xC1000000 + 0x01009658)) = 0x480000e8; // bge loc_1009740    (0x408100a0) => b loc_1009740      (0x480000e8)
-    DCFlushRange((void*)(0xC1000000 + 0x010095b4), 4);
-    ICInvalidateRange((void*)(0xC1000000 + 0x010095b4), 4);
-    DCFlushRange((void*)(0xC1000000 + 0x01009658), 4);
-    ICInvalidateRange((void*)(0xC1000000 + 0x01009658), 4);
+    *((volatile uint32_t *)(0xC1000000 + 0x010091CC)) = 0x480000a0; // ble loc_100926C    (0x408100a0) => b loc_100926C      (0x480000a0)
+    *((volatile uint32_t *)(0xC1000000 + 0x01009270)) = 0x480000e8; // bge loc_1009358    (0x408000e8) => b loc_1009358      (0x480000e8)
+    DCFlushRange((void*)(0xC1000000 + 0x010091CC), 4);
+    ICInvalidateRange((void*)(0xC1000000 + 0x010091CC), 4);
+    DCFlushRange((void*)(0xC1000000 + 0x01009270), 4);
+    ICInvalidateRange((void*)(0xC1000000 + 0x01009270), 4);
 }
 
 /* ****************************************************************** */
@@ -761,6 +776,8 @@ static void InstallFS(private_data_t *private_data)
         unsigned int repl_addr = (unsigned int)magic[len].replacement;
         unsigned int call_addr = (unsigned int)magic[len].call;
         unsigned int orig_instr =(unsigned int)magic[len].orig_instr;
+
+        orig_instr = *(volatile unsigned int *)(0xC1000000 + real_addr);
 
         // set pointer to the real function
         *(volatile unsigned int *)(0xC1000000 + call_addr) = (unsigned int)space - CODE_RW_BASE_OFFSET;
