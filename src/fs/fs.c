@@ -7,6 +7,8 @@
 
 #define USE_EXTRA_LOG_FUNCTIONS   0
 
+#define USE_MEM_FIND 0
+
 #define DECL(res, name, ...) \
         extern res name(__VA_ARGS__); \
         res (* real_ ## name)(__VA_ARGS__)  __attribute__((section(".magicptr"))); \
@@ -213,9 +215,55 @@ DECL(int, FSInit, void) {
         FSDelClient(pClient);
         MEMFreeToDefaultHeap(pCmd);
         MEMFreeToDefaultHeap(pClient);
-
+        
+#if (USE_MEM_FIND > 0)
+        volatile unsigned int *src = NULL;
+        int offset_max = 0; 
+        for (int j = 0; j < 2; ++j)
+        {
+			int i = 0;
+			switch(j)
+			{
+				case 0:
+				{
+					src = (volatile unsigned int *)(0xB8000000);
+					offset_max = 0x8000000;
+					break;
+				}
+				case 1:
+				{
+					src = (volatile unsigned int *)(0xC1000000);
+					offset_max = 0x8000000;//1E20000
+					break;
+				}
+			}
+			
+			while(i < offset_max/4)
+			{
+				unsigned int start = (unsigned int)&src[i];
+				int len = 0;
+				while(i < offset_max/4)
+				{
+					if(src[i] != 0)
+						break;
+	
+					i++;
+					len += 4;
+				}
+	
+				if(len > 0x800)
+				{
+					char buffer[300];
+					__os_snprintf(buffer, sizeof(buffer), "//\t\t{ 0x%08X, 0x%08X } // size %i (%i kB) (%i MB)\n", start, (unsigned int)&src[i-1], len, len/1024, len/1024/1024);
+					log_string(bss.global_sock, buffer, BYTE_LOG_STR);
+				}
+				i++;
+			}
+        }
+        #pragma message "FIND_MEM is active in FSInit hook"
+#endif
         return result;
-    }
+    }    
     return real_FSInit();
 }
 
